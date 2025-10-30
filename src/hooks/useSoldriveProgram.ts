@@ -48,9 +48,12 @@ export const useSoldriveProgram = () => {
   const createUserProfile = async () => {
     if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
 
+    const userProfilePDA = await getUserProfilePDA(wallet.publicKey);
+
     const tx = await program.methods
       .createUserProfile()
       .accounts({
+        userProfile: userProfilePDA,
         user: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -69,9 +72,39 @@ export const useSoldriveProgram = () => {
 
     const timestamp = new BN(Math.floor(Date.now() / 1000));
 
+    // Derive PDAs
+    const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+    const configPDA = await getConfigPDA();
+    const userProfilePDA = await getUserProfilePDA(wallet.publicKey);
+
+    // Ensure required accounts exist
+    const conn = program.provider.connection;
+    const [configInfo, profileInfo] = await Promise.all([
+      conn.getAccountInfo(configPDA),
+      conn.getAccountInfo(userProfilePDA),
+    ]);
+
+    if (!configInfo) {
+      await program.methods
+        .initialize()
+        .accounts({
+          config: configPDA,
+          authority: wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    }
+
+    if (!profileInfo) {
+      await createUserProfile();
+    }
+
     const tx = await program.methods
       .createFile(fileName, new BN(fileSize), fileHash, chunkCount, timestamp)
       .accounts({
+        fileRecord: fileRecordPDA,
+        config: configPDA,
+        userProfile: userProfilePDA,
         owner: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -117,6 +150,12 @@ export const useSoldriveProgram = () => {
 
     try {
       const programAccounts = program as any;
+      const hasAllHelper = programAccounts?.account?.fileRecord?.all;
+      if (!hasAllHelper) {
+        console.warn('Anchor account codecs not available in IDL; skipping fetch.');
+        return [];
+      }
+
       const accounts = await programAccounts.account.fileRecord.all([
         {
           memcmp: {
