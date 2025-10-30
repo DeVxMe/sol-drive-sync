@@ -116,7 +116,8 @@ export const useSoldriveProgram = () => {
     if (!program || !wallet.publicKey) return [];
 
     try {
-      const accounts = await (program.account as any).fileRecord.all([
+      const programAccounts = program as any;
+      const accounts = await programAccounts.account.fileRecord.all([
         {
           memcmp: {
             offset: 8,
