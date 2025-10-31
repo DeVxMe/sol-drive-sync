@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSoldriveProgram } from '@/hooks/useSoldriveProgram';
+import { useFileStore } from '@/hooks/useFileStore';
 
 interface FileRecord {
   publicKey: string;
@@ -21,6 +22,7 @@ interface FileRecord {
 export const FileList = ({ refresh }: { refresh?: number }) => {
   const { publicKey } = useWallet();
   const { getUserFiles } = useSoldriveProgram();
+  const { getFilesByOwner } = useFileStore();
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,18 +34,60 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
         return;
       }
 
+      setLoading(true);
       try {
-        const userFiles = await getUserFiles();
-        setFiles(userFiles as any);
+        // Get files from local store first
+        const localFiles = getFilesByOwner(publicKey.toBase58());
+        
+        // Try to get files from blockchain
+        const blockchainFiles = await getUserFiles();
+        
+        // Combine both sources, prioritizing blockchain data
+        const combinedFiles = [...localFiles.map(lf => ({
+          publicKey: lf.id,
+          account: {
+            fileName: lf.fileName,
+            fileSize: lf.fileSize,
+            primaryStorage: lf.primaryStorage,
+            status: { [lf.status]: {} },
+            isPublic: lf.isPublic,
+            createdAt: lf.createdAt,
+          }
+        })), ...blockchainFiles];
+
+        // Remove duplicates by fileName, keeping blockchain version
+        const uniqueFiles = combinedFiles.reduce((acc, file) => {
+          const existing = acc.find(f => f.account.fileName === file.account.fileName);
+          if (!existing) {
+            acc.push(file);
+          }
+          return acc;
+        }, [] as any[]);
+
+        setFiles(uniqueFiles);
       } catch (error) {
         console.error('Error loading files:', error);
+        // Fallback to local files only
+        const localFiles = getFilesByOwner(publicKey.toBase58());
+        setFiles(localFiles.map(lf => ({
+          publicKey: lf.id,
+          account: {
+            fileName: lf.fileName,
+            fileSize: lf.fileSize,
+            primaryStorage: lf.primaryStorage,
+            status: { [lf.status]: {} },
+            isPublic: lf.isPublic,
+            createdAt: lf.createdAt,
+          }
+        })));
       } finally {
         setLoading(false);
       }
     };
 
     loadFiles();
-  }, [publicKey, getUserFiles, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicKey, refresh]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';

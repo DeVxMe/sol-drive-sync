@@ -4,13 +4,21 @@ import { User, HardDrive, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSoldriveProgram } from '@/hooks/useSoldriveProgram';
+import { useFileStore } from '@/hooks/useFileStore';
 import { toast } from 'sonner';
 
 export const UserProfile = () => {
   const { publicKey } = useWallet();
   const { createUserProfile, getUserProfilePDA, program } = useSoldriveProgram();
+  const { getFilesByOwner, totalStorage } = useFileStore();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const userFiles = publicKey ? getFilesByOwner(publicKey.toBase58()) : [];
+  const activeFiles = userFiles.filter(f => f.status === 'active');
+  const userStorageUsed = publicKey 
+    ? userFiles.reduce((acc, f) => acc + f.fileSize, 0)
+    : 0;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -123,7 +131,7 @@ export const UserProfile = () => {
           <FileText className="w-5 h-5 text-primary" />
           <div>
             <p className="text-sm text-muted-foreground">Files</p>
-            <p className="font-semibold">{profile.filesOwned?.toString() || '0'}</p>
+            <p className="font-semibold">{activeFiles.length}</p>
           </div>
         </div>
 
@@ -131,7 +139,7 @@ export const UserProfile = () => {
           <HardDrive className="w-5 h-5 text-secondary" />
           <div>
             <p className="text-sm text-muted-foreground">Storage</p>
-            <p className="font-semibold">{formatBytes(profile.storageUsed?.toNumber() || 0)}</p>
+            <p className="font-semibold">{formatBytes(userStorageUsed)}</p>
           </div>
         </div>
       </div>
