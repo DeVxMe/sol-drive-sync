@@ -41,13 +41,35 @@ export const UserProfile = () => {
   }, [publicKey, program]);
 
   const handleCreateProfile = async () => {
+    setLoading(true);
     try {
-      await createUserProfile();
-      toast.success('Profile created successfully!');
-      window.location.reload();
-    } catch (error) {
+      const result = await createUserProfile();
+      if (result === 'already-initialized') {
+        toast.info('Profile already exists');
+        setProfile({});
+      } else {
+        toast.success('Profile created successfully!');
+        // Reload profile data instead of full page reload
+        const profilePDA = await getUserProfilePDA(publicKey!);
+        const info = await program!.provider.connection.getAccountInfo(profilePDA);
+        if (info) setProfile({});
+      }
+    } catch (error: any) {
       console.error('Error creating profile:', error);
-      toast.error('Failed to create profile');
+      const errorMsg = error?.message || 'Failed to create profile';
+      if (errorMsg.includes('already been processed')) {
+        toast.info('Profile creation in progress, please wait...');
+        // Check again after a delay
+        setTimeout(async () => {
+          const profilePDA = await getUserProfilePDA(publicKey!);
+          const info = await program!.provider.connection.getAccountInfo(profilePDA);
+          if (info) setProfile({});
+        }, 2000);
+      } else {
+        toast.error(errorMsg);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,8 +91,8 @@ export const UserProfile = () => {
         <p className="text-muted-foreground mb-4">
           Initialize your SolDrive account to start uploading files
         </p>
-        <Button onClick={handleCreateProfile} className="glow">
-          Create Profile
+        <Button onClick={handleCreateProfile} className="glow" disabled={loading}>
+          {loading ? 'Creating...' : 'Create Profile'}
         </Button>
       </Card>
     );
