@@ -49,6 +49,12 @@ export const useSoldriveProgram = () => {
     if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
 
     const userProfilePDA = await getUserProfilePDA(wallet.publicKey);
+    const conn = program.provider.connection;
+    const existing = await conn.getAccountInfo(userProfilePDA);
+    if (existing) {
+      // Already initialized; make this call idempotent
+      return 'already-initialized';
+    }
 
     const tx = await program.methods
       .createUserProfile()

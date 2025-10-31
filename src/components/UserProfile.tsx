@@ -22,10 +22,15 @@ export const UserProfile = () => {
 
       try {
         const profilePDA = await getUserProfilePDA(publicKey);
-        const profileData = await (program.account as any).userProfile.fetch(profilePDA);
-        setProfile(profileData);
+        const info = await program.provider.connection.getAccountInfo(profilePDA);
+        if (info) {
+          // Account exists; we can't decode without account codecs, but mark as present
+          setProfile({});
+        } else {
+          setProfile(null);
+        }
       } catch (error) {
-        console.error('Profile not found:', error);
+        console.error('Error checking profile:', error);
         setProfile(null);
       } finally {
         setLoading(false);
