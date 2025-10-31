@@ -1,3 +1,9 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/soldrive.json`.
+ */
 export const SOLDRIVE_IDL = {
   "address": "CxDoRt3Nt5z747KNW6vkVxvQQ7c2dHMmGmoWNmxejA3f",
   "metadata": {
@@ -8,17 +14,40 @@ export const SOLDRIVE_IDL = {
   },
   "instructions": [
     {
-      "name": "create_file",
-      "discriminator": [98, 191, 1, 17, 32, 12, 160, 31],
+      "name": "createFile",
+      "discriminator": [
+        98,
+        191,
+        1,
+        17,
+        32,
+        12,
+        160,
+        31
+      ],
       "accounts": [
         {
-          "name": "file_record",
+          "name": "fileRecord",
           "writable": true,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": [102, 105, 108, 101] },
-              { "kind": "account", "path": "owner" },
-              { "kind": "arg", "path": "file_name" }
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "fileName"
+              }
             ]
           }
         },
@@ -26,158 +55,740 @@ export const SOLDRIVE_IDL = {
           "name": "config",
           "writable": true,
           "pda": {
-            "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }]
-          }
-        },
-        {
-          "name": "user_profile",
-          "writable": true,
-          "pda": {
             "seeds": [
-              { "kind": "const", "value": [117, 115, 101, 114, 95, 112, 114, 111, 102, 105, 108, 101] },
-              { "kind": "account", "path": "owner" }
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
             ]
           }
         },
-        { "name": "owner", "writable": true, "signer": true },
-        { "name": "system_program", "address": "11111111111111111111111111111111" }
+        {
+          "name": "userProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
       "args": [
-        { "name": "file_name", "type": "string" },
-        { "name": "file_size", "type": "u64" },
-        { "name": "file_hash", "type": { "array": ["u8", 32] } },
-        { "name": "chunk_count", "type": "u32" },
-        { "name": "timestamp", "type": "i64" }
+        {
+          "name": "fileName",
+          "type": "string"
+        },
+        {
+          "name": "fileSize",
+          "type": "u64"
+        },
+        {
+          "name": "fileHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "chunkCount",
+          "type": "u32"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
-      "name": "create_user_profile",
-      "discriminator": [9, 214, 142, 184, 153, 65, 50, 174],
+      "name": "createUserProfile",
+      "discriminator": [
+        9,
+        214,
+        142,
+        184,
+        153,
+        65,
+        50,
+        174
+      ],
       "accounts": [
         {
-          "name": "user_profile",
+          "name": "userProfile",
           "writable": true,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": [117, 115, 101, 114, 95, 112, 114, 111, 102, 105, 108, 101] },
-              { "kind": "account", "path": "user" }
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
             ]
           }
         },
-        { "name": "user", "writable": true, "signer": true },
-        { "name": "system_program", "address": "11111111111111111111111111111111" }
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
       "args": []
     },
     {
-      "name": "finalize_file",
-      "discriminator": [232, 50, 209, 57, 223, 158, 6, 250],
+      "name": "finalizeFile",
+      "discriminator": [
+        232,
+        50,
+        209,
+        57,
+        223,
+        158,
+        6,
+        250
+      ],
       "accounts": [
-        { "name": "file_record", "writable": true },
-        { "name": "owner", "signer": true, "relations": ["file_record"] }
+        {
+          "name": "fileRecord",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "fileRecord"
+          ]
+        }
       ],
       "args": []
     },
     {
-      "name": "grant_access",
-      "discriminator": [66, 88, 87, 113, 39, 22, 27, 165],
+      "name": "grantAccess",
+      "discriminator": [
+        66,
+        88,
+        87,
+        113,
+        39,
+        22,
+        27,
+        165
+      ],
       "accounts": [
         {
-          "name": "shared_access",
+          "name": "sharedAccess",
           "writable": true,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": [115, 104, 97, 114, 101, 100, 95, 97, 99, 99, 101, 115, 115] },
-              { "kind": "account", "path": "file_record" },
-              { "kind": "arg", "path": "shared_with" }
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  100,
+                  95,
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "fileRecord"
+              },
+              {
+                "kind": "arg",
+                "path": "sharedWith"
+              }
             ]
           }
         },
-        { "name": "file_record" },
-        { "name": "owner", "writable": true, "signer": true, "relations": ["file_record"] },
-        { "name": "system_program", "address": "11111111111111111111111111111111" }
+        {
+          "name": "fileRecord"
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "fileRecord"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
       "args": [
-        { "name": "shared_with", "type": "pubkey" },
-        { "name": "access_level", "type": { "defined": { "name": "AccessLevel" } } },
-        { "name": "expires_at", "type": { "option": "i64" } }
+        {
+          "name": "sharedWith",
+          "type": "pubkey"
+        },
+        {
+          "name": "accessLevel",
+          "type": {
+            "defined": {
+              "name": "accessLevel"
+            }
+          }
+        },
+        {
+          "name": "expiresAt",
+          "type": {
+            "option": "i64"
+          }
+        }
       ]
+    },
+    {
+      "name": "helloSoldrive",
+      "discriminator": [
+        181,
+        147,
+        37,
+        131,
+        169,
+        157,
+        119,
+        90
+      ],
+      "accounts": [],
+      "args": []
     },
     {
       "name": "initialize",
-      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
       "accounts": [
         {
           "name": "config",
           "writable": true,
           "pda": {
-            "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }]
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
           }
         },
-        { "name": "authority", "writable": true, "signer": true },
-        { "name": "system_program", "address": "11111111111111111111111111111111" }
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
       "args": []
     },
     {
-      "name": "make_private",
-      "discriminator": [24, 194, 92, 182, 123, 211, 83, 22],
+      "name": "makePrivate",
+      "discriminator": [
+        24,
+        194,
+        92,
+        182,
+        123,
+        211,
+        83,
+        22
+      ],
       "accounts": [
-        { "name": "file_record", "writable": true },
-        { "name": "owner", "signer": true, "relations": ["file_record"] }
+        {
+          "name": "fileRecord",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "fileRecord"
+          ]
+        }
       ],
       "args": []
     },
     {
-      "name": "make_public",
-      "discriminator": [41, 76, 102, 98, 184, 102, 132, 29],
+      "name": "makePublic",
+      "discriminator": [
+        41,
+        76,
+        102,
+        98,
+        184,
+        102,
+        132,
+        29
+      ],
       "accounts": [
-        { "name": "file_record", "writable": true },
-        { "name": "owner", "signer": true, "relations": ["file_record"] }
+        {
+          "name": "fileRecord",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "fileRecord"
+          ]
+        }
       ],
       "args": []
     },
     {
-      "name": "register_storage",
-      "discriminator": [187, 25, 191, 153, 224, 247, 4, 97],
+      "name": "registerStorage",
+      "discriminator": [
+        187,
+        25,
+        191,
+        153,
+        224,
+        247,
+        4,
+        97
+      ],
       "accounts": [
-        { "name": "file_record", "writable": true },
-        { "name": "owner", "signer": true, "relations": ["file_record"] }
+        {
+          "name": "fileRecord",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "fileRecord"
+          ]
+        }
       ],
       "args": [
-        { "name": "primary_storage", "type": "string" },
-        { "name": "merkle_root", "type": { "array": ["u8", 32] } }
+        {
+          "name": "primaryStorage",
+          "type": "string"
+        },
+        {
+          "name": "merkleRoot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
       ]
     },
     {
-      "name": "revoke_access",
-      "discriminator": [106, 128, 38, 169, 103, 238, 102, 147],
+      "name": "revokeAccess",
+      "discriminator": [
+        106,
+        128,
+        38,
+        169,
+        103,
+        238,
+        102,
+        147
+      ],
       "accounts": [
-        { "name": "shared_access", "writable": true },
-        { "name": "file_record", "relations": ["shared_access"] },
-        { "name": "owner", "signer": true, "relations": ["shared_access"] }
+        {
+          "name": "sharedAccess",
+          "writable": true
+        },
+        {
+          "name": "fileRecord",
+          "relations": [
+            "sharedAccess"
+          ]
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "sharedAccess"
+          ]
+        }
       ],
       "args": []
     }
   ],
-  "types": [
+  "accounts": [
     {
-      "name": "AccessLevel",
-      "type": {
-        "kind": "enum",
-        "variants": [{ "name": "Read" }, { "name": "Write" }, { "name": "Admin" }]
-      }
+      "name": "fileRecord",
+      "discriminator": [
+        112,
+        46,
+        49,
+        238,
+        12,
+        221,
+        189,
+        126
+      ]
     },
     {
-      "name": "FileStatus",
+      "name": "sharedAccess",
+      "discriminator": [
+        133,
+        221,
+        251,
+        154,
+        37,
+        64,
+        34,
+        178
+      ]
+    },
+    {
+      "name": "solDriveConfig",
+      "discriminator": [
+        91,
+        100,
+        241,
+        146,
+        103,
+        212,
+        61,
+        59
+      ]
+    },
+    {
+      "name": "userProfile",
+      "discriminator": [
+        32,
+        37,
+        119,
+        205,
+        179,
+        180,
+        13,
+        194
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "fileNameTooLong",
+      "msg": "File name is too long (max 50 characters)"
+    },
+    {
+      "code": 6001,
+      "name": "invalidFileSize",
+      "msg": "Invalid file size"
+    },
+    {
+      "code": 6002,
+      "name": "invalidChunkCount",
+      "msg": "Invalid chunk count"
+    },
+    {
+      "code": 6003,
+      "name": "storageLocationTooLong",
+      "msg": "Storage location string is too long (max 100 characters)"
+    },
+    {
+      "code": 6004,
+      "name": "storageLocationEmpty",
+      "msg": "Storage location cannot be empty"
+    },
+    {
+      "code": 6005,
+      "name": "invalidFileStatus",
+      "msg": "Invalid file status for this operation"
+    },
+    {
+      "code": 6006,
+      "name": "noStorageLocation",
+      "msg": "No storage location registered"
+    },
+    {
+      "code": 6007,
+      "name": "fileNotActive",
+      "msg": "File must be active to share"
+    },
+    {
+      "code": 6008,
+      "name": "invalidExpirationTime",
+      "msg": "Expiration time must be in the future"
+    }
+  ],
+  "types": [
+    {
+      "name": "accessLevel",
       "type": {
         "kind": "enum",
         "variants": [
-          { "name": "Uploading" },
-          { "name": "Processing" },
-          { "name": "Active" },
-          { "name": "Archived" },
-          { "name": "Deleted" }
+          {
+            "name": "read"
+          },
+          {
+            "name": "write"
+          },
+          {
+            "name": "admin"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fileRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "fileName",
+            "type": "string"
+          },
+          {
+            "name": "fileSize",
+            "type": "u64"
+          },
+          {
+            "name": "fileHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "chunkCount",
+            "type": "u32"
+          },
+          {
+            "name": "merkleRoot",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "primaryStorage",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "updatedAt",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "fileStatus"
+              }
+            }
+          },
+          {
+            "name": "isPublic",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fileStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "uploading"
+          },
+          {
+            "name": "processing"
+          },
+          {
+            "name": "active"
+          },
+          {
+            "name": "archived"
+          },
+          {
+            "name": "deleted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sharedAccess",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fileRecord",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "sharedWith",
+            "type": "pubkey"
+          },
+          {
+            "name": "accessLevel",
+            "type": {
+              "defined": {
+                "name": "accessLevel"
+              }
+            }
+          },
+          {
+            "name": "expiresAt",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "solDriveConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "totalFiles",
+            "type": "u64"
+          },
+          {
+            "name": "storageFeePerGb",
+            "type": "u64"
+          },
+          {
+            "name": "maxFileSize",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "userProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "filesOwned",
+            "type": "u64"
+          },
+          {
+            "name": "storageUsed",
+            "type": "u64"
+          },
+          {
+            "name": "storagePaidUntil",
+            "type": "i64"
+          },
+          {
+            "name": "reputationScore",
+            "type": "u32"
+          }
         ]
       }
     }

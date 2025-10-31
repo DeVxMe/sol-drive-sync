@@ -2,7 +2,7 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { AnchorProvider, Program, BN } from '@coral-xyz/anchor';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { useMemo } from 'react';
-import { SOLDRIVE_IDL, SoldriveIDL } from '@/lib/solana/idl';
+import { SOLDRIVE_IDL } from '@/lib/solana/idl';
 import { PROGRAM_ID } from '@/lib/solana/config';
 
 export const useSoldriveProgram = () => {
@@ -52,11 +52,10 @@ export const useSoldriveProgram = () => {
     const conn = program.provider.connection;
     const existing = await conn.getAccountInfo(userProfilePDA);
     if (existing) {
-      // Already initialized; make this call idempotent
       return 'already-initialized';
     }
 
-    const tx = await program.methods
+    const tx = await (program.methods as any)
       .createUserProfile()
       .accounts({
         userProfile: userProfilePDA,
@@ -78,12 +77,10 @@ export const useSoldriveProgram = () => {
 
     const timestamp = new BN(Math.floor(Date.now() / 1000));
 
-    // Derive PDAs
     const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
     const configPDA = await getConfigPDA();
     const userProfilePDA = await getUserProfilePDA(wallet.publicKey);
 
-    // Ensure required accounts exist
     const conn = program.provider.connection;
     const [configInfo, profileInfo] = await Promise.all([
       conn.getAccountInfo(configPDA),
@@ -91,7 +88,7 @@ export const useSoldriveProgram = () => {
     ]);
 
     if (!configInfo) {
-      await program.methods
+      await (program.methods as any)
         .initialize()
         .accounts({
           config: configPDA,
@@ -105,7 +102,7 @@ export const useSoldriveProgram = () => {
       await createUserProfile();
     }
 
-    const tx = await program.methods
+    const tx = await (program.methods as any)
       .createFile(fileName, new BN(fileSize), fileHash, chunkCount, timestamp)
       .accounts({
         fileRecord: fileRecordPDA,
@@ -124,7 +121,7 @@ export const useSoldriveProgram = () => {
 
     const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
 
-    const tx = await program.methods
+    const tx = await (program.methods as any)
       .registerStorage(ipfsCid, merkleRoot)
       .accounts({
         fileRecord: fileRecordPDA,
@@ -140,7 +137,7 @@ export const useSoldriveProgram = () => {
 
     const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
 
-    const tx = await program.methods
+    const tx = await (program.methods as any)
       .finalizeFile()
       .accounts({
         fileRecord: fileRecordPDA,
@@ -156,9 +153,10 @@ export const useSoldriveProgram = () => {
 
     try {
       const programAccounts = program as any;
-      const hasAllHelper = programAccounts?.account?.fileRecord?.all;
-      if (!hasAllHelper) {
-        console.warn('Anchor account codecs not available in IDL; skipping fetch.');
+      const hasFileRecordAccount = programAccounts?.account?.fileRecord;
+      
+      if (!hasFileRecordAccount) {
+        console.warn('FileRecord account type not available in program');
         return [];
       }
 
