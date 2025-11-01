@@ -25,6 +25,14 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
     const file = e.target.files?.[0];
     if (!file || !publicKey) return;
 
+    // Prevent multiple uploads
+    if (uploading) {
+      toast.warning('Upload in progress', {
+        description: 'Please wait for the current upload to complete',
+      });
+      return;
+    }
+
     setUploading(true);
     setProgress(0);
 
@@ -72,7 +80,17 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
       await sleep(1000);
       
       const chunkCount = Math.ceil(file.size / (1024 * 1024));
-      await createFile(file.name, file.size, hashArray, chunkCount);
+      
+      try {
+        await createFile(file.name, file.size, hashArray, chunkCount);
+      } catch (createError: any) {
+        // Handle duplicate transaction or already processed errors
+        if (createError?.message?.includes('already been processed')) {
+          console.warn('Transaction already processed, continuing...');
+        } else {
+          throw createError;
+        }
+      }
 
       // Step 4: Uploading to IPFS
       updateFileStatus(fileId, 'processing');
@@ -89,14 +107,31 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
       await sleep(800);
       
       const merkleRoot = Array(32).fill(0);
-      await registerStorage(file.name, ipfsCid, merkleRoot);
+      
+      try {
+        await registerStorage(file.name, ipfsCid, merkleRoot);
+      } catch (registerError: any) {
+        if (registerError?.message?.includes('already been processed')) {
+          console.warn('Transaction already processed, continuing...');
+        } else {
+          throw registerError;
+        }
+      }
 
       // Step 6: Finalizing file
       setCurrentStep('Finalizing and verifying...');
       setProgress(90);
       await sleep(800);
       
-      await finalizeFile(file.name);
+      try {
+        await finalizeFile(file.name);
+      } catch (finalizeError: any) {
+        if (finalizeError?.message?.includes('already been processed')) {
+          console.warn('Transaction already processed, completing...');
+        } else {
+          throw finalizeError;
+        }
+      }
 
       // Clear temporary UI state - data is now on blockchain
       setProgress(100);
