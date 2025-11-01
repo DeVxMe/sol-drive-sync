@@ -32,7 +32,7 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
     setCurrentFileId(fileId);
 
     try {
-      // Create initial file record in store
+      // Create temporary UI state for upload progress
       addFile({
         id: fileId,
         fileName: file.name,
@@ -72,29 +72,16 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
       await sleep(1000);
       
       const chunkCount = Math.ceil(file.size / (1024 * 1024));
-      
-      try {
-        await createFile(file.name, file.size, hashArray, chunkCount);
-      } catch (error) {
-        console.log('File creation handled:', error);
-      }
+      await createFile(file.name, file.size, hashArray, chunkCount);
 
       // Step 4: Uploading to IPFS
       updateFileStatus(fileId, 'processing');
       setCurrentStep('Uploading to IPFS network...');
       setProgress(45);
       
-      let ipfsCid = '';
-      try {
-        ipfsCid = await uploadChunked(file, (p) => {
-          setProgress(45 + (p * 0.3));
-        });
-      } catch (error) {
-        console.log('Using mock IPFS CID');
-        ipfsCid = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-        setProgress(75);
-        await sleep(1500);
-      }
+      const ipfsCid = await uploadChunked(file, (p) => {
+        setProgress(45 + (p * 0.3));
+      });
 
       // Step 5: Registering storage location
       setCurrentStep('Registering storage location...');
@@ -102,26 +89,16 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
       await sleep(800);
       
       const merkleRoot = Array(32).fill(0);
-      try {
-        await registerStorage(file.name, ipfsCid, merkleRoot);
-      } catch (error) {
-        console.log('Storage registration handled:', error);
-      }
+      await registerStorage(file.name, ipfsCid, merkleRoot);
 
       // Step 6: Finalizing file
       setCurrentStep('Finalizing and verifying...');
       setProgress(90);
       await sleep(800);
       
-      try {
-        await finalizeFile(file.name);
-      } catch (error) {
-        console.log('Finalization handled:', error);
-      }
+      await finalizeFile(file.name);
 
-      // Update to active status
-      updateFileStatus(fileId, 'active');
-
+      // Clear temporary UI state - data is now on blockchain
       setProgress(100);
       setCurrentStep('Complete!');
       await sleep(500);
@@ -130,6 +107,9 @@ export const FileUpload = ({ onUploadComplete }: { onUploadComplete?: () => void
         description: `${file.name} is now on the blockchain`,
       });
 
+      // Remove from local store as it's now on blockchain
+      updateFileStatus(fileId, 'deleted');
+      
       onUploadComplete?.();
     } catch (error) {
       console.error('Upload error:', error);

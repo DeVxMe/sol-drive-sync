@@ -4,49 +4,68 @@ import { User, HardDrive, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSoldriveProgram } from '@/hooks/useSoldriveProgram';
-import { useFileStore } from '@/hooks/useFileStore';
 import { toast } from 'sonner';
+
+interface UserProfileData {
+  filesOwned: number;
+  storageUsed: number;
+  storagePaidUntil: number;
+  reputationScore: number;
+}
 
 export const UserProfile = () => {
   const { publicKey } = useWallet();
   const { createUserProfile, getUserProfilePDA, program } = useSoldriveProgram();
-  const { getFilesByOwner, totalStorage } = useFileStore();
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  const userFiles = publicKey ? getFilesByOwner(publicKey.toBase58()) : [];
-  const activeFiles = userFiles.filter(f => f.status === 'active');
-  const userStorageUsed = publicKey 
-    ? userFiles.reduce((acc, f) => acc + f.fileSize, 0)
-    : 0;
+  const [hasProfile, setHasProfile] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [profileData, setProfileData] = useState<UserProfileData | null>(null);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const checkProfile = async () => {
       if (!publicKey || !program) {
-        setProfile(null);
-        setLoading(false);
+        setHasProfile(false);
+        setProfileData(null);
+        setChecking(false);
         return;
       }
 
+      setChecking(true);
       try {
-        const profilePDA = await getUserProfilePDA(publicKey);
-        const info = await program.provider.connection.getAccountInfo(profilePDA);
-        if (info) {
-          // Account exists; we can't decode without account codecs, but mark as present
-          setProfile({});
+        const userProfilePDA = await getUserProfilePDA(publicKey);
+        const connection = program.provider.connection;
+        
+        const accountInfo = await connection.getAccountInfo(userProfilePDA);
+        if (accountInfo) {
+          setHasProfile(true);
+          
+          // Fetch profile data
+          try {
+            const profileAccount = await (program as any).account.userProfile.fetch(userProfilePDA);
+            setProfileData({
+              filesOwned: profileAccount.filesOwned?.toNumber() || 0,
+              storageUsed: profileAccount.storageUsed?.toNumber() || 0,
+              storagePaidUntil: profileAccount.storagePaidUntil?.toNumber() || 0,
+              reputationScore: profileAccount.reputationScore || 0,
+            });
+          } catch (error) {
+            console.error('Error fetching profile data:', error);
+          }
         } else {
-          setProfile(null);
+          setHasProfile(false);
+          setProfileData(null);
         }
       } catch (error) {
         console.error('Error checking profile:', error);
-        setProfile(null);
+        setHasProfile(false);
+        setProfileData(null);
       } finally {
-        setLoading(false);
+        setChecking(false);
       }
     };
 
-    loadProfile();
-  }, [publicKey, program]);
+    checkProfile();
+  }, [publicKey, getUserProfilePDA, program]);
 
   const handleCreateProfile = async () => {
     setLoading(true);
@@ -54,24 +73,38 @@ export const UserProfile = () => {
       const result = await createUserProfile();
       if (result === 'already-initialized') {
         toast.info('Profile already exists');
-        setProfile({});
+        setHasProfile(true);
       } else {
         toast.success('Profile created successfully!');
-        // Reload profile data instead of full page reload
+        setHasProfile(true);
+        // Reload profile data
         const profilePDA = await getUserProfilePDA(publicKey!);
-        const info = await program!.provider.connection.getAccountInfo(profilePDA);
-        if (info) setProfile({});
+        const profileAccount = await (program as any).account.userProfile.fetch(profilePDA);
+        setProfileData({
+          filesOwned: profileAccount.filesOwned?.toNumber() || 0,
+          storageUsed: profileAccount.storageUsed?.toNumber() || 0,
+          storagePaidUntil: profileAccount.storagePaidUntil?.toNumber() || 0,
+          reputationScore: profileAccount.reputationScore || 0,
+        });
       }
     } catch (error: any) {
       console.error('Error creating profile:', error);
       const errorMsg = error?.message || 'Failed to create profile';
       if (errorMsg.includes('already been processed')) {
         toast.info('Profile creation in progress, please wait...');
-        // Check again after a delay
         setTimeout(async () => {
           const profilePDA = await getUserProfilePDA(publicKey!);
           const info = await program!.provider.connection.getAccountInfo(profilePDA);
-          if (info) setProfile({});
+          if (info) {
+            setHasProfile(true);
+            const profileAccount = await (program as any).account.userProfile.fetch(profilePDA);
+            setProfileData({
+              filesOwned: profileAccount.filesOwned?.toNumber() || 0,
+              storageUsed: profileAccount.storageUsed?.toNumber() || 0,
+              storagePaidUntil: profileAccount.storagePaidUntil?.toNumber() || 0,
+              reputationScore: profileAccount.reputationScore || 0,
+            });
+          }
         }, 2000);
       } else {
         toast.error(errorMsg);
@@ -83,7 +116,7 @@ export const UserProfile = () => {
 
   if (!publicKey) return null;
 
-  if (loading) {
+  if (checking) {
     return (
       <Card className="glass card-shadow p-6">
         <p className="text-muted-foreground text-center">Loading profile...</p>
@@ -91,7 +124,7 @@ export const UserProfile = () => {
     );
   }
 
-  if (!profile) {
+  if (!hasProfile) {
     return (
       <Card className="glass card-shadow p-6 text-center">
         <User className="w-12 h-12 text-primary mx-auto mb-4" />
@@ -105,12 +138,6 @@ export const UserProfile = () => {
       </Card>
     );
   }
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  };
 
   return (
     <Card className="glass card-shadow p-6">
@@ -127,20 +154,17 @@ export const UserProfile = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/50">
-          <FileText className="w-5 h-5 text-primary" />
-          <div>
-            <p className="text-sm text-muted-foreground">Files</p>
-            <p className="font-semibold">{activeFiles.length}</p>
-          </div>
+        <div className="text-center p-4 rounded-lg bg-muted/50">
+          <FileText className="w-6 h-6 text-primary mx-auto mb-2" />
+          <p className="text-2xl font-bold">{profileData?.filesOwned || 0}</p>
+          <p className="text-sm text-muted-foreground">Files</p>
         </div>
-
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border/50">
-          <HardDrive className="w-5 h-5 text-secondary" />
-          <div>
-            <p className="text-sm text-muted-foreground">Storage</p>
-            <p className="font-semibold">{formatBytes(userStorageUsed)}</p>
-          </div>
+        <div className="text-center p-4 rounded-lg bg-muted/50">
+          <HardDrive className="w-6 h-6 text-primary mx-auto mb-2" />
+          <p className="text-2xl font-bold">
+            {((profileData?.storageUsed || 0) / (1024 * 1024)).toFixed(2)} MB
+          </p>
+          <p className="text-sm text-muted-foreground">Storage Used</p>
         </div>
       </div>
     </Card>
