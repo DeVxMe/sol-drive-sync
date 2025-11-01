@@ -25,6 +25,8 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadFiles = async () => {
       if (!publicKey) {
         setFiles([]);
@@ -36,17 +38,27 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
       try {
         // Get files from blockchain only
         const blockchainFiles = await getUserFiles();
-        setFiles(blockchainFiles);
+        if (isMounted) {
+          setFiles(blockchainFiles);
+        }
       } catch (error) {
         console.error('Error loading files:', error);
-        setFiles([]);
+        if (isMounted) {
+          setFiles([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadFiles();
-  }, [publicKey, refresh, getUserFiles]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [publicKey, refresh]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';

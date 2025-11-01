@@ -22,6 +22,8 @@ export const UserProfile = () => {
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkProfile = async () => {
       if (!publicKey || !program) {
         setHasProfile(false);
@@ -36,18 +38,23 @@ export const UserProfile = () => {
         const connection = program.provider.connection;
         
         const accountInfo = await connection.getAccountInfo(userProfilePDA);
+        
+        if (!isMounted) return;
+        
         if (accountInfo) {
           setHasProfile(true);
           
           // Fetch profile data
           try {
             const profileAccount = await (program as any).account.userProfile.fetch(userProfilePDA);
-            setProfileData({
-              filesOwned: profileAccount.filesOwned?.toNumber() || 0,
-              storageUsed: profileAccount.storageUsed?.toNumber() || 0,
-              storagePaidUntil: profileAccount.storagePaidUntil?.toNumber() || 0,
-              reputationScore: profileAccount.reputationScore || 0,
-            });
+            if (isMounted) {
+              setProfileData({
+                filesOwned: profileAccount.filesOwned?.toNumber() || 0,
+                storageUsed: profileAccount.storageUsed?.toNumber() || 0,
+                storagePaidUntil: profileAccount.storagePaidUntil?.toNumber() || 0,
+                reputationScore: profileAccount.reputationScore || 0,
+              });
+            }
           } catch (error) {
             console.error('Error fetching profile data:', error);
           }
@@ -60,12 +67,18 @@ export const UserProfile = () => {
         setHasProfile(false);
         setProfileData(null);
       } finally {
-        setChecking(false);
+        if (isMounted) {
+          setChecking(false);
+        }
       }
     };
 
     checkProfile();
-  }, [publicKey, getUserProfilePDA, program]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [publicKey, program]);
 
   const handleCreateProfile = async () => {
     setLoading(true);

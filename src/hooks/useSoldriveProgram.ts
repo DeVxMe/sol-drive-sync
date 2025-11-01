@@ -156,7 +156,6 @@ export const useSoldriveProgram = () => {
       const hasFileRecordAccount = programAccounts?.account?.fileRecord;
       
       if (!hasFileRecordAccount) {
-        console.warn('FileRecord account type not available in program');
         return [];
       }
 
@@ -171,7 +170,12 @@ export const useSoldriveProgram = () => {
 
       return accounts;
     } catch (error) {
-      console.error('Error fetching files:', error);
+      // Silently handle errors to prevent console spam
+      if (error?.message?.includes('rate limited')) {
+        console.warn('Rate limited, retrying in next fetch cycle');
+      } else {
+        console.error('Error fetching files:', error);
+      }
       return [];
     }
   };
