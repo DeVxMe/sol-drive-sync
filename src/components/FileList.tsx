@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { File, Share2, Lock, Unlock, ExternalLink } from 'lucide-react';
+import { File, Share2, Lock, Unlock, ExternalLink, Download } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useSoldriveProgram } from '@/hooks/useSoldriveProgram';
+import { toast } from 'sonner';
 
 interface FileRecord {
   publicKey: string;
@@ -76,6 +79,69 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
     }
   };
 
+  const handleDownload = async (file: FileRecord) => {
+    if (!file.account.primaryStorage) {
+      toast.error('File not available', {
+        description: 'Storage location not found',
+      });
+      return;
+    }
+
+    try {
+      toast.info('Downloading file...', {
+        description: 'Please wait while we fetch your file',
+      });
+
+      const ipfsUrl = `https://gateway.lighthouse.storage/ipfs/${file.account.primaryStorage}`;
+      const response = await fetch(ipfsUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch file');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.account.fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Download complete!', {
+        description: `${file.account.fileName} has been downloaded`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Download failed', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  const handleShare = (file: FileRecord) => {
+    if (!file.account.primaryStorage) {
+      toast.error('Cannot share', {
+        description: 'File storage location not found',
+      });
+      return;
+    }
+
+    const shareUrl = `https://gateway.lighthouse.storage/ipfs/${file.account.primaryStorage}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Link copied!', {
+      description: 'Share link has been copied to clipboard',
+    });
+  };
+
+  const togglePrivacy = (file: FileRecord) => {
+    // This would require blockchain transaction to update the file's privacy setting
+    toast.info('Privacy toggle', {
+      description: 'This feature requires a blockchain transaction to update file privacy',
+    });
+  };
+
   if (!publicKey) {
     return (
       <Card className="glass card-shadow p-8 text-center">
@@ -105,8 +171,8 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
     <div className="space-y-4">
       {files.map((file) => (
         <Card key={file.publicKey} className="glass card-shadow p-6 hover:border-primary/50 transition-all">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4 flex-1">
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <File className="w-6 h-6 text-primary" />
               </div>
@@ -137,18 +203,53 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2">
+                {file.account.isPublic ? (
+                  <Unlock className="w-4 h-4 text-secondary" />
+                ) : (
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                )}
+                <Label htmlFor={`privacy-${file.publicKey}`} className="text-sm font-medium cursor-pointer">
+                  {file.account.isPublic ? 'Public Access' : 'Private Access'}
+                </Label>
+              </div>
+              <Switch
+                id={`privacy-${file.publicKey}`}
+                checked={file.account.isPublic}
+                onCheckedChange={() => togglePrivacy(file)}
+              />
+            </div>
+
+            <div className="flex gap-2">
               {file.account.primaryStorage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.open(`https://gateway.lighthouse.storage/ipfs/${file.account.primaryStorage}`, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleDownload(file)}
+                    className="flex-1"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://gateway.lighthouse.storage/ipfs/${file.account.primaryStorage}`, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
+                </>
               )}
-              <Button variant="ghost" size="sm">
-                <Share2 className="w-4 h-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleShare(file)}
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
               </Button>
             </div>
           </div>
