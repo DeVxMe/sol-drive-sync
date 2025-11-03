@@ -180,6 +180,119 @@ export const useSoldriveProgram = () => {
     }
   };
 
+  const makePublic = async (fileName: string) => {
+    if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
+
+    const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+
+    const tx = await (program.methods as any)
+      .makePublic()
+      .accounts({
+        fileRecord: fileRecordPDA,
+        owner: wallet.publicKey,
+      })
+      .rpc();
+
+    return tx;
+  };
+
+  const makePrivate = async (fileName: string) => {
+    if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
+
+    const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+
+    const tx = await (program.methods as any)
+      .makePrivate()
+      .accounts({
+        fileRecord: fileRecordPDA,
+        owner: wallet.publicKey,
+      })
+      .rpc();
+
+    return tx;
+  };
+
+  const getSharedAccessPDA = async (fileRecordPDA: PublicKey, sharedWith: PublicKey) => {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('shared_access'), fileRecordPDA.toBuffer(), sharedWith.toBuffer()],
+      PROGRAM_ID
+    );
+    return pda;
+  };
+
+  const grantAccess = async (
+    fileName: string,
+    sharedWithAddress: string,
+    accessLevel: { read?: {} } | { write?: {} } | { admin?: {} },
+    expiresAt?: number
+  ) => {
+    if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
+
+    const sharedWith = new PublicKey(sharedWithAddress);
+    const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+    const sharedAccessPDA = await getSharedAccessPDA(fileRecordPDA, sharedWith);
+
+    const expiresAtBN = expiresAt ? new BN(expiresAt) : null;
+
+    const tx = await (program.methods as any)
+      .grantAccess(sharedWith, accessLevel, expiresAtBN)
+      .accounts({
+        sharedAccess: sharedAccessPDA,
+        fileRecord: fileRecordPDA,
+        owner: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    return tx;
+  };
+
+  const revokeAccess = async (fileName: string, sharedWithAddress: string) => {
+    if (!program || !wallet.publicKey) throw new Error('Wallet not connected');
+
+    const sharedWith = new PublicKey(sharedWithAddress);
+    const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+    const sharedAccessPDA = await getSharedAccessPDA(fileRecordPDA, sharedWith);
+
+    const tx = await (program.methods as any)
+      .revokeAccess()
+      .accounts({
+        sharedAccess: sharedAccessPDA,
+        fileRecord: fileRecordPDA,
+        owner: wallet.publicKey,
+      })
+      .rpc();
+
+    return tx;
+  };
+
+  const getFileSharedAccess = async (fileName: string) => {
+    if (!program || !wallet.publicKey) return [];
+
+    try {
+      const fileRecordPDA = await getFileRecordPDA(wallet.publicKey, fileName);
+      const programAccounts = program as any;
+      
+      if (!programAccounts?.account?.sharedAccess) {
+        return [];
+      }
+
+      const accounts = await programAccounts.account.sharedAccess.all([
+        {
+          memcmp: {
+            offset: 8,
+            bytes: fileRecordPDA.toBase58(),
+          },
+        },
+      ]);
+
+      return accounts;
+    } catch (error) {
+      console.error('Error fetching shared access:', error);
+      return [];
+    }
+  };
+
   return {
     program,
     createUserProfile,
@@ -190,5 +303,11 @@ export const useSoldriveProgram = () => {
     getUserProfilePDA,
     getConfigPDA,
     getFileRecordPDA,
+    makePublic,
+    makePrivate,
+    grantAccess,
+    revokeAccess,
+    getSharedAccessPDA,
+    getFileSharedAccess,
   };
 };

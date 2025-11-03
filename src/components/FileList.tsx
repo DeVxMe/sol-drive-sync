@@ -24,45 +24,32 @@ interface FileRecord {
 
 export const FileList = ({ refresh }: { refresh?: number }) => {
   const { publicKey } = useWallet();
-  const { getUserFiles } = useSoldriveProgram();
+  const { getUserFiles, makePublic, makePrivate } = useSoldriveProgram();
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerFile, setViewerFile] = useState<FileRecord | null>(null);
 
+  const fetchFiles = async () => {
+    if (!publicKey) {
+      setFiles([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const blockchainFiles = await getUserFiles();
+      setFiles(blockchainFiles);
+    } catch (error) {
+      console.error('Error loading files:', error);
+      setFiles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    
-    const loadFiles = async () => {
-      if (!publicKey) {
-        setFiles([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // Get files from blockchain only
-        const blockchainFiles = await getUserFiles();
-        if (isMounted) {
-          setFiles(blockchainFiles);
-        }
-      } catch (error) {
-        console.error('Error loading files:', error);
-        if (isMounted) {
-          setFiles([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadFiles();
-    
-    return () => {
-      isMounted = false;
-    };
+    fetchFiles();
   }, [publicKey, refresh]);
 
   const formatFileSize = (bytes: number) => {
@@ -139,33 +126,47 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
 
   const togglePrivacy = async (file: FileRecord, newPrivacy: boolean) => {
     try {
-      toast.info('Updating privacy...', {
-        description: 'Processing blockchain transaction',
+      const fileName = file.account.fileName;
+      
+      toast.info('Processing Transaction', {
+        description: `Making file ${newPrivacy ? 'public' : 'private'}...`,
       });
 
-      // TODO: Implement blockchain transaction to update file privacy
-      // This would call a Solana program instruction to update the isPublic field
+      let txSignature: string;
       
-      // For now, show a detailed message about what would happen
-      const message = newPrivacy 
-        ? 'Making file public will allow anyone with the link to view it'
-        : 'Making file private will restrict access to only you';
-      
-      toast.warning('Privacy update requires blockchain transaction', {
-        description: message,
+      if (newPrivacy) {
+        txSignature = await makePublic(fileName);
+      } else {
+        txSignature = await makePrivate(fileName);
+      }
+
+      toast.success('Success!', {
+        description: (
+          <div className="space-y-1">
+            <p>File is now {newPrivacy ? 'public' : 'private'}</p>
+            <a 
+              href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline block"
+            >
+              View transaction →
+            </a>
+          </div>
+        ),
         duration: 5000,
       });
 
-      // After blockchain transaction succeeds, update local state
-      // setFiles(files.map(f => 
-      //   f.publicKey === file.publicKey 
-      //     ? { ...f, account: { ...f.account, isPublic: newPrivacy } } 
-      //     : f
-      // ));
+      // Refresh the file list to show updated status
+      setTimeout(() => {
+        fetchFiles();
+      }, 1500);
+      
     } catch (error) {
       console.error('Privacy toggle error:', error);
-      toast.error('Failed to update privacy', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Transaction Failed', {
+        description: error instanceof Error ? error.message : 'Failed to update privacy setting',
+        duration: 5000,
       });
     }
   };
