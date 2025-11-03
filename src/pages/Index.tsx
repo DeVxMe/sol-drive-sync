@@ -5,6 +5,7 @@ import { UserProfile } from '@/components/UserProfile';
 import { FileUpload } from '@/components/FileUpload';
 import { FileList } from '@/components/FileList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SharedFiles from '@/components/SharedFiles';
 
 const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -68,10 +69,9 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="shared">
-            <div className="glass card-shadow p-8 text-center rounded-lg">
-              <p className="text-muted-foreground">Shared files coming soon...</p>
-            </div>
+            <SharedFiles />
           </TabsContent>
+
         </Tabs>
       </main>
 

@@ -153,6 +153,7 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
   const executePrivacyToggle = async () => {
     const { file, newPrivacy } = confirmDialog;
     if (!file) return;
+    if (processingFiles.has(file.publicKey)) return;
 
     setConfirmDialog({ open: false, file: null, newPrivacy: false });
 

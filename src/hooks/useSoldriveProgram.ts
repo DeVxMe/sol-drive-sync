@@ -293,6 +293,86 @@ export const useSoldriveProgram = () => {
     }
   };
 
+  const getFilesSharedWithMe = async () => {
+    if (!program || !wallet.publicKey) return [];
+
+    try {
+      const programAny = program as any;
+      if (!programAny?.account?.sharedAccess) return [];
+
+      // shared_with offset = 8 (disc) + 32 (file_record) + 32 (owner) = 72
+      const accounts = await programAny.account.sharedAccess.all([
+        {
+          memcmp: {
+            offset: 72,
+            bytes: wallet.publicKey.toBase58(),
+          },
+        },
+      ]);
+
+      const active = accounts.filter((a: any) => a.account.isActive);
+
+      const withFiles = await Promise.all(
+        active.map(async (sa: any) => {
+          try {
+            const fileAccount = await programAny.account.fileRecord.fetch(sa.account.fileRecord);
+            return {
+              sharedAccess: sa,
+              file: { publicKey: sa.account.fileRecord, account: fileAccount },
+            };
+          } catch {
+            return { sharedAccess: sa, file: null };
+          }
+        })
+      );
+
+      return withFiles;
+    } catch (e) {
+      console.error('Error fetching files shared with me:', e);
+      return [];
+    }
+  };
+
+  const getFilesIShared = async () => {
+    if (!program || !wallet.publicKey) return [];
+
+    try {
+      const programAny = program as any;
+      if (!programAny?.account?.sharedAccess) return [];
+
+      // owner offset = 8 (disc) + 32 (file_record) = 40
+      const accounts = await programAny.account.sharedAccess.all([
+        {
+          memcmp: {
+            offset: 40,
+            bytes: wallet.publicKey.toBase58(),
+          },
+        },
+      ]);
+
+      const active = accounts.filter((a: any) => a.account.isActive);
+
+      const withFiles = await Promise.all(
+        active.map(async (sa: any) => {
+          try {
+            const fileAccount = await programAny.account.fileRecord.fetch(sa.account.fileRecord);
+            return {
+              sharedAccess: sa,
+              file: { publicKey: sa.account.fileRecord, account: fileAccount },
+            };
+          } catch {
+            return { sharedAccess: sa, file: null };
+          }
+        })
+      );
+
+      return withFiles;
+    } catch (e) {
+      console.error('Error fetching files I shared:', e);
+      return [];
+    }
+  };
+
   return {
     program,
     createUserProfile,
@@ -309,5 +389,7 @@ export const useSoldriveProgram = () => {
     revokeAccess,
     getSharedAccessPDA,
     getFileSharedAccess,
+    getFilesSharedWithMe,
+    getFilesIShared,
   };
 };
