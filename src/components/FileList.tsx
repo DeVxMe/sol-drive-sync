@@ -38,6 +38,7 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerFile, setViewerFile] = useState<FileRecord | null>(null);
+  const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set());
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     file: FileRecord | null;
@@ -140,6 +141,12 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
   };
 
   const handlePrivacyToggle = (file: FileRecord, newPrivacy: boolean) => {
+    if (processingFiles.has(file.publicKey)) {
+      toast.error('Transaction in progress', {
+        description: 'Please wait for the current transaction to complete',
+      });
+      return;
+    }
     setConfirmDialog({ open: true, file, newPrivacy });
   };
 
@@ -148,6 +155,9 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
     if (!file) return;
 
     setConfirmDialog({ open: false, file: null, newPrivacy: false });
+
+    // Add to processing set to prevent duplicate submissions
+    setProcessingFiles(prev => new Set(prev).add(file.publicKey));
 
     try {
       const fileName = file.account.fileName;
@@ -183,14 +193,36 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
 
       setTimeout(() => {
         fetchFiles();
+        setProcessingFiles(prev => {
+          const next = new Set(prev);
+          next.delete(file.publicKey);
+          return next;
+        });
       }, 1500);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Privacy toggle error:', error);
-      toast.error('Transaction Failed', {
-        description: error instanceof Error ? error.message : 'Failed to update privacy setting',
-        duration: 5000,
+      
+      // Remove from processing set on error
+      setProcessingFiles(prev => {
+        const next = new Set(prev);
+        next.delete(file.publicKey);
+        return next;
       });
+
+      // Handle specific error cases
+      if (error?.message?.includes('AlreadyProcessed')) {
+        toast.error('Transaction Already Processed', {
+          description: 'This transaction was already submitted. Refreshing file list...',
+          duration: 3000,
+        });
+        setTimeout(() => fetchFiles(), 1000);
+      } else {
+        toast.error('Transaction Failed', {
+          description: error?.message || 'Failed to update privacy setting',
+          duration: 5000,
+        });
+      }
     }
   };
 
@@ -279,6 +311,7 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
                 <Switch
                   id={`privacy-${file.publicKey}`}
                   checked={file.account.isPublic}
+                  disabled={processingFiles.has(file.publicKey)}
                   onCheckedChange={(checked) => handlePrivacyToggle(file, checked)}
                 />
               </div>
