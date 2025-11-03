@@ -6,6 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useSoldriveProgram } from '@/hooks/useSoldriveProgram';
 import { toast } from 'sonner';
 import { FileViewer } from './FileViewer';
@@ -28,6 +38,11 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerFile, setViewerFile] = useState<FileRecord | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    file: FileRecord | null;
+    newPrivacy: boolean;
+  }>({ open: false, file: null, newPrivacy: false });
 
   const fetchFiles = async () => {
     if (!publicKey) {
@@ -124,12 +139,21 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
     });
   };
 
-  const togglePrivacy = async (file: FileRecord, newPrivacy: boolean) => {
+  const handlePrivacyToggle = (file: FileRecord, newPrivacy: boolean) => {
+    setConfirmDialog({ open: true, file, newPrivacy });
+  };
+
+  const executePrivacyToggle = async () => {
+    const { file, newPrivacy } = confirmDialog;
+    if (!file) return;
+
+    setConfirmDialog({ open: false, file: null, newPrivacy: false });
+
     try {
       const fileName = file.account.fileName;
       
-      toast.info('Processing Transaction', {
-        description: `Making file ${newPrivacy ? 'public' : 'private'}...`,
+      toast.info('Updating privacy...', {
+        description: 'Processing blockchain transaction',
       });
 
       let txSignature: string;
@@ -157,7 +181,6 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
         duration: 5000,
       });
 
-      // Refresh the file list to show updated status
       setTimeout(() => {
         fetchFiles();
       }, 1500);
@@ -256,7 +279,7 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
                 <Switch
                   id={`privacy-${file.publicKey}`}
                   checked={file.account.isPublic}
-                  onCheckedChange={(checked) => togglePrivacy(file, checked)}
+                  onCheckedChange={(checked) => handlePrivacyToggle(file, checked)}
                 />
               </div>
 
@@ -316,6 +339,28 @@ export const FileList = ({ refresh }: { refresh?: number }) => {
           fileSize={viewerFile.account.fileSize}
         />
       )}
+
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, file: null, newPrivacy: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog.newPrivacy ? 'Make File Public?' : 'Make File Private?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.newPrivacy 
+                ? 'Making this file public will allow anyone with the link to view it. This requires a blockchain transaction.'
+                : 'Making this file private will restrict access to only you. This requires a blockchain transaction.'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executePrivacyToggle}>
+              Confirm & Sign Transaction
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
